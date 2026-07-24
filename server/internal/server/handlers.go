@@ -1808,6 +1808,17 @@ func (s *Server) handleBridgeUsers(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleBridgeConfig returns the current bridge configuration for self-check
+func (s *Server) handleBridgeConfig(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"bridgeNodeIDs":           s.analyzer.GetBridgeNodeIDs(),
+		"bridgeInboundPattern":    s.analyzer.GetBridgeInboundPattern(),
+		"bridgeCorrelationWindow": s.analyzer.GetBridgeCorrelationWindow().String(),
+		"remnawaveEnabled":        s.remnawave != nil,
+	})
+}
+
 // handleAttackAnomalies returns only attack-type anomalies (port_scan,
 // abuse_port_flood) enriched with the resolved username — for the
 // dedicated Attacks tab in Threat Intel.

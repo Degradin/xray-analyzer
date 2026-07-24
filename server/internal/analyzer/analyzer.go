@@ -110,6 +110,24 @@ func (a *Analyzer) SetBridgeCorrelation(nodeIDs []string, maxAge time.Duration) 
 	a.bridgeCorrelationWindow = maxAge
 }
 
+// GetBridgeNodeIDs returns the configured bridge node IDs
+func (a *Analyzer) GetBridgeNodeIDs() []string {
+	return a.bridgeNodeIDs
+}
+
+// GetBridgeInboundPattern returns the configured bridge inbound pattern
+func (a *Analyzer) GetBridgeInboundPattern() string {
+	if a.bridgeInboundRegex == nil {
+		return ""
+	}
+	return a.bridgeInboundRegex.String()
+}
+
+// GetBridgeCorrelationWindow returns the configured bridge correlation window
+func (a *Analyzer) GetBridgeCorrelationWindow() time.Duration {
+	return a.bridgeCorrelationWindow
+}
+
 // ProcessBatch processes a batch of log entries
 func (a *Analyzer) ProcessBatch(ctx context.Context, batch *models.LogBatch) (processed int, blacklistHits int, err error) {
 	if batch.NodeID == "" {

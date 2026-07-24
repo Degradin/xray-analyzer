@@ -150,7 +150,7 @@ export default function BridgeUsersPage() {
         <CardContent className="pt-6 flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">{t("bridge")}:</span>
-            {["ru-whitelist", "ru-bride"].map(n => (
+            {["ru-whitelist", "ru-bridge"].map(n => (
               <Button
                 key={n}
                 size="sm"

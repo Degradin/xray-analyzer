@@ -250,6 +250,7 @@ func (s *Server) Start(ctx context.Context) error {
 	mux.HandleFunc("/api/anomalies", s.requireAPIToken(s.cached(30*time.Second, s.handleAnomalies)))
 	mux.HandleFunc("/api/bridged-flows", s.requireAPIToken(s.cached(30*time.Second, s.handleBridgedFlows)))
 	mux.HandleFunc("/api/bridge-users", s.requireAPIToken(s.cached(15*time.Second, s.handleBridgeUsers)))
+	mux.HandleFunc("/api/bridge-config", s.requireAPIToken(s.cached(30*time.Second, s.handleBridgeConfig)))
 	mux.HandleFunc("/api/alerts", s.requireAPIToken(s.cached(30*time.Second, s.handleAlerts)))
 	mux.HandleFunc("/api/blacklist/stats", s.requireAPIToken(s.cached(60*time.Second, s.handleBlacklistStats)))
 	mux.HandleFunc("/api/blacklist/analytics", s.requireAPIToken(s.cached(60*time.Second, s.handleBlacklistAnalytics)))
