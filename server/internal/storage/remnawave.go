@@ -63,6 +63,11 @@ func (s *Storage) UpsertRemnaUser(ctx context.Context, user *remnawave.RemnaUser
 
 // UpsertRemnaHwidDevice adapts remnawave.RemnaHwidData to storage
 func (s *Storage) UpsertRemnaHwidDevice(ctx context.Context, device *remnawave.RemnaHwidData) error {
+	// Skip devices without user_uuid (Remnawave 2.8+ may return orphaned devices)
+	if device.UserUUID == "" {
+		return nil
+	}
+
 	query := `
 		INSERT INTO remna_hwid_devices (
 			hwid, user_uuid, username, platform, os_version, device_model, app_version,

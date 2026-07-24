@@ -178,12 +178,19 @@ func (s *Storage) LookupBridgeCandidates(ctx context.Context, at time.Time, wind
 	lo := at.Add(-window).UTC()
 	hi := at.Add(window).UTC()
 
+	// Join with remna_users to get the real user UUID for synthetic IDs.
+	// Remnawave assigns different synthetic IDs (e.g., "2", "15") on different nodes
+	// for the same real user. We need to match by the real user UUID, not synthetic IDs.
 	rows, err := s.pool.Query(ctx, `
-		SELECT user_email, host(ip_address), node_id, last_seen
-		FROM user_ip_history
-		WHERE node_id = ANY($1)
-		  AND last_seen BETWEEN $2 AND $3
-		ORDER BY last_seen DESC
+		SELECT COALESCE(r.uuid, h.user_email) as user_email,
+		       host(h.ip_address),
+		       h.node_id,
+		       h.last_seen
+		FROM user_ip_history h
+		LEFT JOIN remna_users r ON r.id = h.user_email::text::bigint
+		WHERE h.node_id = ANY($1)
+		  AND h.last_seen BETWEEN $2 AND $3
+		ORDER BY h.last_seen DESC
 		LIMIT 200
 	`, nodeIntIDs, lo, hi)
 	if err != nil {

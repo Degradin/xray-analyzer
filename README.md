@@ -402,6 +402,45 @@ curl http://localhost:8237/health
 ```
 Должен вернуть `200`. Если `503 partition unhealthy` — посмотри логи на наличие SQL errors в partition creation/drop.
 
+### Bridge correlation не работает
+
+Если страница bridge users не показывает активность:
+
+**Как работает корреляция с Remnawave:**
+Remnawave назначает разные синтетические ID на разных нодах для одного реального пользователя:
+- Bridge-нода (4vps-ru-01): `email: 2` (синтетический ID)
+- Exit-нода (waicore-de-01): `email: 15` (другой синтетический ID для того же пользователя)
+
+Анализатор резолвит синтетические ID в реальные UUID через таблицу remna_users, затем сопоставляет по времени в окне ±15s.
+
+Диагностика:
+```bash
+# 1. Проверь что агенты запущены на bridge-нодах
+ssh bridge-node "docker ps | grep xray-log-agent"
+
+# 2. Проверь есть ли данные в user_ip_history от bridge-нод
+docker exec analyzer-postgres psql -U xray_analyzer -d xray_analyzer \
+  -c "SELECT node_id, COUNT(*) FROM user_ip_history WHERE last_seen > NOW() - INTERVAL '1 hour' GROUP BY node_id;"
+
+# 3. Проверь что Remnawave sync работает (нужно для резолва синтетических ID)
+docker exec analyzer-postgres psql -U xray_analyzer -d xray_analyzer \
+  -c "SELECT COUNT(*) FROM remna_users;"
+
+# 4. Проверь конфигурацию
+# BRIDGE_INBOUND_PATTERN должен быть: ^BRIDGE_.*_IN(_\d+)?$
+# BRIDGE_NODE_IDS должны совпадать с NODE_ID в конфигах bridge-нод
+```
+
+Подробный гайд: [server/BRIDGE_SETUP.md](./server/BRIDGE_SETUP.md)
+
+### Легитимные домены блокируются
+
+Если Apple, Google, Microsoft, Instagram и т.д. блокируются:
+
+1. **Отключи удалённый blacklist** - Установи `BLACKLIST_REMOTE_URL=` (пусто) в `.env`
+2. URL по умолчанию (Re-filter-lists) содержит российские домены цензуры, которые блокируют нормальные сервисы
+3. Используй только локальный `blacklist.txt` с курируемыми вредоносными доменами
+
 ---
 
 ## Development
