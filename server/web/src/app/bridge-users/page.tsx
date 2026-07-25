@@ -84,18 +84,34 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
 
 export default function BridgeUsersPage() {
   const t = useTranslations("bridgeUsersPage");
+
   const [users, setUsers] = useState<BridgeUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const [since, setSince] = useState("1h");
-  const [node, setNode] = useState("ru-whitelist");
+  const [node, setNode] = useState("");
 
   const load = useCallback(async () => {
     try {
-      const res = await authFetch(`/api/bridge-users?node=${encodeURIComponent(node)}&since=${encodeURIComponent(since)}&limit=200`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const params = new URLSearchParams({
+        since,
+        limit: "200",
+      });
+
+      if (node.trim() !== "") {
+        params.set("node", node);
+      }
+
+      const res = await authFetch(`/api/bridge-users?${params.toString()}`);
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
       const json = await res.json();
+
       setUsers(json.users ?? []);
       setError(null);
     } catch (e) {
