@@ -157,10 +157,16 @@ func (s *Storage) RecordBridgedFlows(ctx context.Context, flows []*BridgedFlow) 
 //
 // Uses s.pool (native pgx) so []string is passed as a Postgres text[] array.
 // user_ip_history.node_id is smallint FK so we resolve text → id first.
-func (s *Storage) LookupBridgeCandidates(ctx context.Context, at time.Time, window time.Duration, bridgeNodeIDs []string) ([]BridgeCandidate, error) {
+func (s *Storage) LookupBridgeCandidates(
+	ctx context.Context,
+	at time.Time,
+	window time.Duration,
+	bridgeNodeIDs []string,
+) ([]BridgeCandidate, error) {
 	if len(bridgeNodeIDs) == 0 {
 		return nil, nil
 	}
+
 	if window <= 0 {
 		window = 15 * time.Second
 	}
@@ -168,60 +174,99 @@ func (s *Storage) LookupBridgeCandidates(ctx context.Context, at time.Time, wind
 	// Resolve text node names to smallint IDs.
 	nodeIntIDs := make([]int16, 0, len(bridgeNodeIDs))
 	nodeIDToText := make(map[int16]string, len(bridgeNodeIDs))
+
 	for _, n := range bridgeNodeIDs {
 		nid, err := s.LookupNodeID(ctx, n, "bridge")
 		if err != nil {
+			log.Printf("LookupBridgeCandidates: LookupNodeID(%q) failed: %v", n, err)
 			continue
 		}
+
 		nodeIntIDs = append(nodeIntIDs, int16(nid))
 		nodeIDToText[int16(nid)] = n
 	}
+
 	if len(nodeIntIDs) == 0 {
+		log.Printf("LookupBridgeCandidates: no resolved node IDs")
 		return nil, nil
 	}
 
 	lo := at.Add(-window).UTC()
 	hi := at.Add(window).UTC()
 
-	// Join with remna_users to get the real user UUID for synthetic IDs.
-	// Remnawave assigns different synthetic IDs (e.g., "2", "15") on different nodes
-	// for the same real user. We need to match by the real user UUID, not synthetic IDs.
+	log.Printf(
+		"LookupBridgeCandidates: bridgeNodes=%v nodeIDs=%v window=%s .. %s",
+		bridgeNodeIDs,
+		nodeIntIDs,
+		lo.Format(time.RFC3339),
+		hi.Format(time.RFC3339),
+	)
+
 	rows, err := s.pool.Query(ctx, `
-		SELECT COALESCE(r.uuid, h.user_email) as user_email,
-		       host(h.ip_address),
-		       h.node_id,
-		       h.last_seen
+		SELECT
+			COALESCE(r.uuid, h.user_email) AS user_email,
+			host(h.ip_address),
+			h.node_id,
+			h.last_seen
 		FROM user_ip_history h
-		LEFT JOIN remna_users r ON r.id = h.user_email::text::bigint
+		LEFT JOIN remna_users r
+			ON r.id = h.user_email::text::bigint
 		WHERE h.node_id = ANY($1)
 		  AND h.last_seen BETWEEN $2 AND $3
 		ORDER BY h.last_seen DESC
 		LIMIT 200
 	`, nodeIntIDs, lo, hi)
 	if err != nil {
+		log.Printf("LookupBridgeCandidates: query failed: %v", err)
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var out []BridgeCandidate
+
 	for rows.Next() {
 		var c BridgeCandidate
 		var userUUID uuid.UUID
 		var ipStr string
 		var nodeIntID int16
-		if err := rows.Scan(&userUUID, &ipStr, &nodeIntID, &c.LastSeen); err != nil {
+
+		if err := rows.Scan(
+			&userUUID,
+			&ipStr,
+			&nodeIntID,
+			&c.LastSeen,
+		); err != nil {
 			return nil, err
 		}
+
 		c.UserEmail = userUUID.String()
 		c.IPAddress = ipStr
+
 		if txt, ok := nodeIDToText[nodeIntID]; ok {
 			c.BridgeNodeID = txt
 		} else {
 			c.BridgeNodeID = fmt.Sprintf("%d", nodeIntID)
 		}
+
 		out = append(out, c)
+
+		log.Printf(
+			"LookupBridgeCandidates: HIT uuid=%s ip=%s node=%s lastSeen=%s",
+			c.UserEmail,
+			c.IPAddress,
+			c.BridgeNodeID,
+			c.LastSeen.Format(time.RFC3339),
+		)
 	}
-	return out, rows.Err()
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	log.Printf("LookupBridgeCandidates: returned %d candidates", len(out))
+
+	return out, nil
 }
 
 // LookupRealClientIP (legacy 1:1 by user_email) — kept for direct-inbound
