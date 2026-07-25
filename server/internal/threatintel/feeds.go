@@ -242,7 +242,6 @@ func (f *FeedLoader) LoadAllFeeds(ctx context.Context) error {
 		{SourceSpamhaus, f.loadSpamhausDROP},
 		// Content category blocklists (StevenBlack extensions — categories without BlockList Project equivalents)
 		{SourceGambling, f.loadGamblingBlocklist},
-		{SourceSocial, f.loadSocialBlocklist},
 		{SourceFakeNews, f.loadFakeNewsBlocklist},
 		// P2P / Anonymization
 		{SourceTorrent, f.loadTorrentTrackers},
@@ -252,7 +251,6 @@ func (f *FeedLoader) LoadAllFeeds(ctx context.Context) error {
 		{SourceMiningPools, f.loadMiningPools},
 		// BlockList Project — comprehensive category blocklists
 		{SourceBlockListAbuse, f.loadBlockListAbuse},
-		{SourceBlockListAds, f.loadBlockListAds},
 		{SourceBlockListCrypto, f.loadBlockListCrypto},
 		{SourceBlockListDrugs, f.loadBlockListDrugs},
 		{SourceBlockListFraud, f.loadBlockListFraud},
