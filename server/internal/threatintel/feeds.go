@@ -583,35 +583,28 @@ func (f *FeedLoader) CheckIndicator(indicator string) *ThreatIndicator {
 
 // CheckDestination checks a destination (domain:port or IP:port) against threat intel
 func (f *FeedLoader) CheckDestination(destination string) *ThreatIndicator {
-	// Extract host and port from destination
-	log.Printf("CHECK host=%q", host)
+    host := destination
+    port := 0
 
-	if ind := f.CheckIndicator(host); ind != nil {
-		log.Printf("MATCH source=%s indicator=%s", ind.Source, ind.Indicator)
-		return ind
-	}
-	host := destination
-	port := 0
-	if idx := strings.LastIndex(destination, ":"); idx > 0 {
-		// Handle IPv6 addresses
-		if strings.Count(destination, ":") > 1 && !strings.HasPrefix(destination, "[") {
-			// This is IPv6 without brackets, keep as is
-		} else {
-			host = destination[:idx]
-			// Parse port
-			if p, err := strconv.Atoi(destination[idx+1:]); err == nil {
-				port = p
-			}
-		}
-	}
+    if idx := strings.LastIndex(destination, ":"); idx > 0 {
+        if strings.Count(destination, ":") > 1 && !strings.HasPrefix(destination, "[") {
+            // IPv6
+        } else {
+            host = destination[:idx]
+            if p, err := strconv.Atoi(destination[idx+1:]); err == nil {
+                port = p
+            }
+        }
+    }
 
-	// Remove brackets from IPv6
-	host = strings.Trim(host, "[]")
+    host = strings.Trim(host, "[]")
 
-	// First check by indicator (domain/IP)
-	if ind := f.CheckIndicator(host); ind != nil {
-		return ind
-	}
+    log.Printf("CHECK host=%q", host)
+
+    if ind := f.CheckIndicator(host); ind != nil {
+        log.Printf("MATCH source=%s indicator=%q type=%s", ind.Source, ind.Indicator, ind.ThreatType)
+        return ind
+    }
 
 	// Then check by port for protocol detection
 	if port > 0 {
