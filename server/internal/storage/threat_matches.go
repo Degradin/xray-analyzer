@@ -173,11 +173,23 @@ func (s *Storage) GetThreatMatches(ctx context.Context, limit int) ([]*threatint
 		LIMIT $1
 	`, limit)
 	if err != nil {
+		log.Printf("GetThreatMatches query error: %v", err)
 		return nil, err
 	}
 	defer rows.Close()
 
-	return scanThreatMatchesWithDisplayName(rows)
+	matches, err := scanThreatMatchesWithDisplayName(rows)
+	if err != nil {
+		log.Printf("GetThreatMatches scan error: %v", err)
+		return nil, err
+	}
+
+	log.Printf("GetThreatMatches: returned %d matches", len(matches))
+	for _, m := range matches {
+		log.Printf("  %s %s %s", m.ThreatType, m.Destination, m.MatchedAt)
+	}
+
+	return matches, nil
 }
 
 // GetThreatMatchesByUser returns threat matches for a specific user
