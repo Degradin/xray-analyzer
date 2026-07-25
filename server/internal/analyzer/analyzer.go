@@ -341,8 +341,6 @@ if len(candidates) == 0 {
     continue
 }
 
-...
-
 if err := a.storage.RecordBridgedFlows(ctx, flows); err != nil {
     log.Printf("bridge insert error: %v", err)
 } else {
