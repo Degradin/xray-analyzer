@@ -148,12 +148,16 @@ func (a *Analyzer) ProcessBatch(ctx context.Context, batch *models.LogBatch) (pr
 		// Count user requests
 		userRequests[entry.UserEmail]++
 
-		// Track last IP for user. For bridged inbounds the source is the
-		// upstream bridge node (e.g. RU-White), not the real client — skip
-		// so user_ip_history / ip_user_map / user_locations stay clean.
-		// The destination is still correct and is recorded below.
-		if entry.SourceIP != "" && !a.isInfrastructureSource(entry.Inbound) {
-			userLastIP[entry.UserEmail] = entry.SourceIP
+		// Track last IP for user.
+		// For BRIDGE_*_IN the SourceIP is the real client IP, so we also
+		// persist it for bridge correlation.
+		if entry.SourceIP != "" {
+			switch {
+			case a.isInfrastructureSource(entry.Inbound):
+				userLastIP[entry.UserEmail] = entry.SourceIP
+			default:
+				userLastIP[entry.UserEmail] = entry.SourceIP
+			}
 		}
 
 		// Track unique destinations per user

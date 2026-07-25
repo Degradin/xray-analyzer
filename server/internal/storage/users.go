@@ -795,14 +795,17 @@ func (s *Storage) RecordUserIP(ctx context.Context, userEmail, ipAddress, nodeID
 		return fmt.Errorf("resolve user_email: %w", err)
 	}
 
-	// node_id is nullable smallint FK — resolve if non-empty.
-	var nodeIntID interface{}
-	if nodeID != "" {
-		nid, err := s.LookupNodeID(ctx, nodeID, "exit")
-		if err == nil {
-			nodeIntID = int16(nid)
-		}
+// node_id is nullable smallint FK — resolve if non-empty.
+// Try exit first, then bridge.
+var nodeIntID interface{}
+
+if nodeID != "" {
+	if nid, err := s.LookupNodeID(ctx, nodeID, "exit"); err == nil {
+		nodeIntID = int16(nid)
+	} else if nid, err := s.LookupNodeID(ctx, nodeID, "bridge"); err == nil {
+		nodeIntID = int16(nid)
 	}
+}
 
 	_, err = s.pool.Exec(ctx, `
 		INSERT INTO user_ip_history (user_email, ip_address, node_id, country_code, country_name, city, first_seen, last_seen, request_count)
