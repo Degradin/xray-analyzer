@@ -226,38 +226,45 @@ func (f *FeedLoader) loadWithRetry(ctx context.Context, source ThreatSource, loa
 }
 
 // LoadAllFeeds loads all threat intelligence feeds with controlled concurrency
-feeds := []struct {
-	source ThreatSource
-	loader func(context.Context) (int, error)
-}{
-	// Malware / C2 / Botnets
-	{SourceURLhaus, f.loadURLhaus},
-	{SourceThreatFox, f.loadThreatFox},
-	{SourceFeodoTracker, f.loadFeodoTracker},
+func (f *FeedLoader) LoadAllFeeds(ctx context.Context) error {
+	feeds := []struct {
+		source ThreatSource
+		loader func(context.Context) (int, error)
+	}{
+		// Malware / C2 / Botnets
+		{SourceURLhaus, f.loadURLhaus},
+		{SourceThreatFox, f.loadThreatFox},
+		{SourceFeodoTracker, f.loadFeodoTracker},
 
-	// High-confidence reputation feeds
-	{SourceAlienVaultOTX, f.loadAlienVaultOTX},
-	{SourcePhishTank, f.loadPhishTank},
-	{SourceSpamhaus, f.loadSpamhausDROP},
+		// High-confidence reputation feeds
+		{SourceAlienVaultOTX, f.loadAlienVaultOTX},
+		{SourcePhishTank, f.loadPhishTank},
+		{SourceSpamhaus, f.loadSpamhausDROP},
 
-	// Tor / Anonymization
-	{SourceTor, f.loadTorExitNodes},
-	{SourceTorRelays, f.loadTorRelays},
+		// Tor / Anonymization
+		{SourceTor, f.loadTorExitNodes},
+		{SourceTorRelays, f.loadTorRelays},
 
-	// Cryptomining
-	{SourceMiningPools, f.loadMiningPools},
+		// Cryptomining
+		{SourceMiningPools, f.loadMiningPools},
 
-	// BlockList Project (security only)
-	{SourceBlockListMalware, f.loadBlockListMalware},
-	{SourceBlockListPhishing, f.loadBlockListPhishing},
-	{SourceBlockListFraud, f.loadBlockListFraud},
-	{SourceBlockListScam, f.loadBlockListScam},
-	{SourceBlockListRansomware, f.loadBlockListRansomware},
-	{SourceBlockListCrypto, f.loadBlockListCrypto},
+		// BlockList Project (security only)
+		{SourceBlockListMalware, f.loadBlockListMalware},
+		{SourceBlockListPhishing, f.loadBlockListPhishing},
+		{SourceBlockListFraud, f.loadBlockListFraud},
+		{SourceBlockListScam, f.loadBlockListScam},
+		{SourceBlockListRansomware, f.loadBlockListRansomware},
+		{SourceBlockListCrypto, f.loadBlockListCrypto},
 
-	// Optional
-	{SourceBlockListRedirect, f.loadBlockListRedirect},
-}
+		// Optional
+		{SourceBlockListRedirect, f.loadBlockListRedirect},
+	}
+
+	var errorCount int
+	const batchSize = 5
+	const batchDelay = 2 * time.Second
+
+	// ... дальше без изменений ...
 
 	var errorCount int
 	const batchSize = 5
