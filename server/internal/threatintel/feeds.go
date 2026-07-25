@@ -226,47 +226,38 @@ func (f *FeedLoader) loadWithRetry(ctx context.Context, source ThreatSource, loa
 }
 
 // LoadAllFeeds loads all threat intelligence feeds with controlled concurrency
-func (f *FeedLoader) LoadAllFeeds(ctx context.Context) error {
-	// Define all feeds
-	feeds := []struct {
-		source ThreatSource
-		loader func(context.Context) (int, error)
-	}{
-		// Specialized malware/C2/botnet
-		{SourceURLhaus, f.loadURLhaus},
-		{SourceFeodoTracker, f.loadFeodoTracker},
-		{SourceThreatFox, f.loadThreatFox},
-		// Reputation-based (high signal)
-		{SourceAlienVaultOTX, f.loadAlienVaultOTX},
-		{SourcePhishTank, f.loadPhishTank},
-		{SourceSpamhaus, f.loadSpamhausDROP},
-		// Content category blocklists (StevenBlack extensions — categories without BlockList Project equivalents)
-		{SourceGambling, f.loadGamblingBlocklist},
-		{SourceSocial, f.loadSocialBlocklist},
-		{SourceFakeNews, f.loadFakeNewsBlocklist},
-		// P2P / Anonymization
-		{SourceTorrent, f.loadTorrentTrackers},
-		{SourceTor, f.loadTorExitNodes},
-		{SourceTorRelays, f.loadTorRelays},
-		// Cryptomining pools (hardcoded list)
-		{SourceMiningPools, f.loadMiningPools},
-		// BlockList Project — comprehensive category blocklists
-		{SourceBlockListAbuse, f.loadBlockListAbuse},
-		{SourceBlockListAds, f.loadBlockListAds},
-		{SourceBlockListCrypto, f.loadBlockListCrypto},
-		{SourceBlockListDrugs, f.loadBlockListDrugs},
-		{SourceBlockListFraud, f.loadBlockListFraud},
-		{SourceBlockListMalware, f.loadBlockListMalware},
-		{SourceBlockListPhishing, f.loadBlockListPhishing},
-		{SourceBlockListPiracy, f.loadBlockListPiracy},
-		{SourceBlockListPorn, f.loadBlockListPorn},
-		{SourceBlockListScam, f.loadBlockListScam},
-		{SourceBlockListRedirect, f.loadBlockListRedirect},
-		{SourceBlockListTikTok, f.loadBlockListTikTok},
-		{SourceBlockListTorrent, f.loadBlockListTorrent},
-		{SourceBlockListTracking, f.loadBlockListTracking},
-		{SourceBlockListRansomware, f.loadBlockListRansomware},
-	}
+feeds := []struct {
+	source ThreatSource
+	loader func(context.Context) (int, error)
+}{
+	// Malware / C2 / Botnets
+	{SourceURLhaus, f.loadURLhaus},
+	{SourceThreatFox, f.loadThreatFox},
+	{SourceFeodoTracker, f.loadFeodoTracker},
+
+	// High-confidence reputation feeds
+	{SourceAlienVaultOTX, f.loadAlienVaultOTX},
+	{SourcePhishTank, f.loadPhishTank},
+	{SourceSpamhaus, f.loadSpamhausDROP},
+
+	// Tor / Anonymization
+	{SourceTor, f.loadTorExitNodes},
+	{SourceTorRelays, f.loadTorRelays},
+
+	// Cryptomining
+	{SourceMiningPools, f.loadMiningPools},
+
+	// BlockList Project (security only)
+	{SourceBlockListMalware, f.loadBlockListMalware},
+	{SourceBlockListPhishing, f.loadBlockListPhishing},
+	{SourceBlockListFraud, f.loadBlockListFraud},
+	{SourceBlockListScam, f.loadBlockListScam},
+	{SourceBlockListRansomware, f.loadBlockListRansomware},
+	{SourceBlockListCrypto, f.loadBlockListCrypto},
+
+	// Optional
+	{SourceBlockListRedirect, f.loadBlockListRedirect},
+}
 
 	var errorCount int
 	const batchSize = 5

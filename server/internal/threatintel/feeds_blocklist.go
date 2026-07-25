@@ -19,7 +19,7 @@ import (
 
 // blockListProjectBaseURL is the base URL for BlockList Project raw files
 // Using raw.githubusercontent.com instead of github.io for better reliability
-const blockListProjectBaseURL = "https://raw.githubusercontent.com/blocklistproject/Lists/master/"
+const blockListProjectBaseURL = "https://blocklistproject.github.io/Lists/"
 
 // loadBlockListProjectHosts loads domains from BlockList Project hosts format
 // Format: 0.0.0.0 domain.com
