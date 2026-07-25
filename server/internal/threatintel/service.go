@@ -203,6 +203,19 @@ func (s *Service) CheckDestination(destination string) *ThreatIndicator {
 // CheckAndRecord checks a destination and records a match if found
 func (s *Service) CheckAndRecord(ctx context.Context, userEmail, nodeID, sourceIP, destination string) *ThreatMatch {
 	indicator := s.loader.CheckDestination(destination)
+
+	if indicator != nil {
+		log.Printf(
+			"THREAT MATCH: dst=%q indicator=%q source=%s type=%s confidence=%d desc=%q",
+			destination,
+			indicator.Indicator,
+			indicator.Source,
+			indicator.ThreatType,
+			indicator.Confidence,
+			indicator.Description,
+		)
+	}
+
 	if indicator == nil {
 		return nil
 	}
