@@ -264,12 +264,6 @@ func (f *FeedLoader) LoadAllFeeds(ctx context.Context) error {
 	const batchSize = 5
 	const batchDelay = 2 * time.Second
 
-	// ... дальше без изменений ...
-
-	var errorCount int
-	const batchSize = 5
-	const batchDelay = 2 * time.Second
-
 	// Process feeds in batches to avoid rate limiting
 	for i := 0; i < len(feeds); i += batchSize {
 		end := i + batchSize
