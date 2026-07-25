@@ -285,8 +285,16 @@ func (a *Analyzer) ProcessBatch(ctx context.Context, batch *models.LogBatch) (pr
 // entries arriving inside a second would otherwise be 100 queries).
 func (a *Analyzer) correlateBridgedFlows(ctx context.Context, batch *models.LogBatch) {
 	if len(a.bridgeNodeIDs) == 0 || a.bridgeInboundRegex == nil {
+		log.Printf("bridge: disabled (nodes=%v regex=%v)", a.bridgeNodeIDs, a.bridgeInboundRegex)
 		return
 	}
+
+	log.Printf(
+		"bridge: node=%q entries=%d regex=%q",
+		batch.NodeID,
+		len(batch.Entries),
+		a.bridgeInboundRegex.String(),
+	)
 
 	// Collect bridged entries up-front.
 	var bridged []models.LogEntry
@@ -296,6 +304,9 @@ func (a *Analyzer) correlateBridgedFlows(ctx context.Context, batch *models.LogB
 		}
 		bridged = append(bridged, e)
 	}
+
+	log.Printf("bridge: bridged entries=%d", len(bridged))
+
 	if len(bridged) == 0 {
 		return
 	}
@@ -305,13 +316,17 @@ func (a *Analyzer) correlateBridgedFlows(ctx context.Context, batch *models.LogB
 	if windowSec <= 0 {
 		windowSec = 15
 	}
+
 	type bucket struct {
 		anchor  time.Time
 		entries []models.LogEntry
 	}
+
 	buckets := make(map[int64]*bucket)
+
 	for _, e := range bridged {
 		slot := e.Timestamp.Unix() / windowSec
+
 		b, ok := buckets[slot]
 		if !ok {
 			b = &bucket{anchor: e.Timestamp}
@@ -319,33 +334,57 @@ func (a *Analyzer) correlateBridgedFlows(ctx context.Context, batch *models.LogB
 		} else if e.Timestamp.After(b.anchor) {
 			b.anchor = e.Timestamp
 		}
+
 		b.entries = append(b.entries, e)
 	}
 
+	log.Printf("bridge: buckets=%d", len(buckets))
+
 	for _, b := range buckets {
-candidates, err := a.storage.LookupBridgeCandidates(
-    ctx,
-    b.anchor,
-    a.bridgeCorrelationWindow,
-    a.bridgeNodeIDs,
-)
+		candidates, err := a.storage.LookupBridgeCandidates(
+			ctx,
+			b.anchor,
+			a.bridgeCorrelationWindow,
+			a.bridgeNodeIDs,
+		)
 
-if err != nil {
-    log.Printf("bridge lookup error: %v", err)
-    continue
-}
+		log.Printf(
+			"bridge: candidates=%d err=%v anchor=%s",
+			len(candidates),
+			err,
+			b.anchor.Format(time.RFC3339),
+		)
 
-log.Printf("bridge: found %d candidates", len(candidates))
+		if err != nil {
+			continue
+		}
 
-if len(candidates) == 0 {
-    continue
-}
+		if len(candidates) == 0 {
+			continue
+		}
 
-if err := a.storage.RecordBridgedFlows(ctx, flows); err != nil {
-    log.Printf("bridge insert error: %v", err)
-} else {
-    log.Printf("bridge: inserted %d flows", len(flows))
-}
+		flows := make([]*storage.BridgedFlow, 0, len(b.entries)*len(candidates))
+
+		for _, e := range b.entries {
+			for _, c := range candidates {
+				flows = append(flows, &storage.BridgedFlow{
+					UserEmail:    c.UserEmail,
+					RealClientIP: c.IPAddress,
+					BridgeNodeID: c.BridgeNodeID,
+					ExitNodeID:   batch.NodeID,
+					Destination:  e.Destination,
+					Timestamp:    e.Timestamp,
+				})
+			}
+		}
+
+		log.Printf("bridge: flows=%d", len(flows))
+
+		if err := a.storage.RecordBridgedFlows(ctx, flows); err != nil {
+			log.Printf("bridge: insert error: %v", err)
+		} else {
+			log.Printf("bridge: inserted %d flows", len(flows))
+		}
 	}
 }
 
