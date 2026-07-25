@@ -204,13 +204,13 @@ func (s *Storage) LookupBridgeCandidates(
 
 	rows, err := s.pool.Query(ctx, `
 		SELECT
-			COALESCE(r.uuid, h.user_email) AS user_email,
+			h.user_email,
 			host(h.ip_address),
 			h.node_id,
 			h.last_seen
 		FROM user_ip_history h
 		LEFT JOIN remna_users r
-			ON r.id = h.user_email::text::bigint
+			ON r.uuid = h.user_email
 		WHERE h.node_id = ANY($1)
 		  AND h.last_seen BETWEEN $2 AND $3
 		ORDER BY h.last_seen DESC

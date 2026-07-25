@@ -27,7 +27,7 @@ func New() *Parser {
 	// \[(.+?) (?:>>|->) (.+?)\] - inbound >> or -> outbound (supports both formats)
 	// email: (\S+) - user email
 	regex := regexp.MustCompile(
-		`^(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}\.\d+)\s+from\s+(?:tcp:)?([\w\[\]:.-]+):(\d+)\s+accepted\s+(tcp|udp):(.+?)\s+\[(.+?)\s+(?:>>|->)\s+(.+?)\]\s+email:\s+(\S+)`,
+		`^(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}\.\d+)\s+from\s+(?:(?:tcp|udp):)?([\w\[\]:.-]+):(\d+)\s+accepted\s+(tcp|udp):(.+?)\s+\[(.+?)\s+(?:>>|->)\s+(.+?)\]\s+email:\s+(\S+)`,
 	)
 	return &Parser{lineRegex: regex}
 }
