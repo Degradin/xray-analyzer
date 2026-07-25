@@ -105,7 +105,7 @@ func Load() *Config {
 		OpenAIBaseURL:           getEnv("OPENAI_BASE_URL", ""),
 		OpenAIModel:             getEnv("OPENAI_MODEL", ""),
 		BridgeInboundPattern:    getEnv("BRIDGE_INBOUND_PATTERN", `^BRIDGE_.*_IN(_\d+)?$`),
-		BridgeNodeIDs:           getStringSliceEnv("BRIDGE_NODE_IDS", []string{"ru-white", "ru-bridge", "ru-whitelist"}),
+		BridgeNodeIDs:           getStringSliceEnv("BRIDGE_NODE_IDS", []string{"4vps-ru-01","servhost-ru-02"}),
 		BridgeCorrelationWindow: getDurationEnv("BRIDGE_CORRELATION_WINDOW", 15*time.Second),
 		RedisAddr:               getEnv("REDIS_ADDR", ""),
 		RedisPassword:           getEnv("REDIS_PASSWORD", ""),
