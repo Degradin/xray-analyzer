@@ -227,37 +227,45 @@ func (f *FeedLoader) loadWithRetry(ctx context.Context, source ThreatSource, loa
 
 // LoadAllFeeds loads all threat intelligence feeds with controlled concurrency
 func (f *FeedLoader) LoadAllFeeds(ctx context.Context) error {
+	// Define all feeds
 	feeds := []struct {
 		source ThreatSource
 		loader func(context.Context) (int, error)
 	}{
-		// Malware / C2 / Botnets
+		// Specialized malware/C2/botnet
 		{SourceURLhaus, f.loadURLhaus},
-		{SourceThreatFox, f.loadThreatFox},
 		{SourceFeodoTracker, f.loadFeodoTracker},
-
-		// High-confidence reputation feeds
+		{SourceThreatFox, f.loadThreatFox},
+		// Reputation-based (high signal)
 		{SourceAlienVaultOTX, f.loadAlienVaultOTX},
 		{SourcePhishTank, f.loadPhishTank},
 		{SourceSpamhaus, f.loadSpamhausDROP},
-
-		// Tor / Anonymization
+		// Content category blocklists (StevenBlack extensions — categories without BlockList Project equivalents)
+		{SourceGambling, f.loadGamblingBlocklist},
+		{SourceSocial, f.loadSocialBlocklist},
+		{SourceFakeNews, f.loadFakeNewsBlocklist},
+		// P2P / Anonymization
+		{SourceTorrent, f.loadTorrentTrackers},
 		{SourceTor, f.loadTorExitNodes},
 		{SourceTorRelays, f.loadTorRelays},
-
-		// Cryptomining
+		// Cryptomining pools (hardcoded list)
 		{SourceMiningPools, f.loadMiningPools},
-
-		// BlockList Project (security only)
+		// BlockList Project — comprehensive category blocklists
+		{SourceBlockListAbuse, f.loadBlockListAbuse},
+		{SourceBlockListAds, f.loadBlockListAds},
+		{SourceBlockListCrypto, f.loadBlockListCrypto},
+		{SourceBlockListDrugs, f.loadBlockListDrugs},
+		{SourceBlockListFraud, f.loadBlockListFraud},
 		{SourceBlockListMalware, f.loadBlockListMalware},
 		{SourceBlockListPhishing, f.loadBlockListPhishing},
-		{SourceBlockListFraud, f.loadBlockListFraud},
+		{SourceBlockListPiracy, f.loadBlockListPiracy},
+		{SourceBlockListPorn, f.loadBlockListPorn},
 		{SourceBlockListScam, f.loadBlockListScam},
-		{SourceBlockListRansomware, f.loadBlockListRansomware},
-		{SourceBlockListCrypto, f.loadBlockListCrypto},
-
-		// Optional
 		{SourceBlockListRedirect, f.loadBlockListRedirect},
+		{SourceBlockListTikTok, f.loadBlockListTikTok},
+		{SourceBlockListTorrent, f.loadBlockListTorrent},
+		{SourceBlockListTracking, f.loadBlockListTracking},
+		{SourceBlockListRansomware, f.loadBlockListRansomware},
 	}
 
 	var errorCount int
@@ -576,6 +584,12 @@ func (f *FeedLoader) CheckIndicator(indicator string) *ThreatIndicator {
 // CheckDestination checks a destination (domain:port or IP:port) against threat intel
 func (f *FeedLoader) CheckDestination(destination string) *ThreatIndicator {
 	// Extract host and port from destination
+	log.Printf("CHECK host=%q", host)
+
+	if ind := f.CheckIndicator(host); ind != nil {
+		log.Printf("MATCH source=%s indicator=%s", ind.Source, ind.Indicator)
+		return ind
+	}
 	host := destination
 	port := 0
 	if idx := strings.LastIndex(destination, ":"); idx > 0 {
