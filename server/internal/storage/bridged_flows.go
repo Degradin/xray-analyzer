@@ -82,6 +82,11 @@ type BridgeCandidate struct {
 // Falls back to per-flow insert on error so a single bad row doesn't drop the
 // whole batch.
 func (s *Storage) RecordBridgedFlows(ctx context.Context, flows []*BridgedFlow) error {
+	log.Printf(
+		"bridge: input=%d prepped=%d",
+		len(flows),
+		len(flows),
+	)
 	if len(flows) == 0 {
 		return nil
 	}

@@ -133,6 +133,7 @@ func (a *Analyzer) ProcessBatch(ctx context.Context, batch *models.LogBatch) (pr
 	if batch.NodeID == "" {
 		return 0, 0, fmt.Errorf("empty node_id in batch")
 	}
+	log.Printf("ProcessBatch: node=%q entries=%d", batch.NodeID, len(batch.Entries))
 	// Track per-user stats in this batch
 	userRequests := make(map[string]int)
 	userBlacklist := make(map[string]int)
@@ -322,29 +323,31 @@ func (a *Analyzer) correlateBridgedFlows(ctx context.Context, batch *models.LogB
 	}
 
 	for _, b := range buckets {
-		candidates, err := a.storage.LookupBridgeCandidates(ctx, b.anchor, a.bridgeCorrelationWindow, a.bridgeNodeIDs)
-		if err != nil || len(candidates) == 0 {
-			continue
-		}
-		// Build Cartesian product once, then commit in a single batched INSERT.
-		// With 100 entries × 5 candidates that's 500 rows in one round-trip
-		// instead of 500 sequential round-trips — DB cost goes from O(N·M) to O(1).
-		flows := make([]*storage.BridgedFlow, 0, len(b.entries)*len(candidates))
-		for _, e := range b.entries {
-			for _, c := range candidates {
-				flows = append(flows, &storage.BridgedFlow{
-					UserEmail:    c.UserEmail,
-					RealClientIP: c.IPAddress,
-					BridgeNodeID: c.BridgeNodeID,
-					ExitNodeID:   batch.NodeID,
-					Destination:  e.Destination,
-					Timestamp:    e.Timestamp,
-				})
-			}
-		}
-		if err := a.storage.RecordBridgedFlows(ctx, flows); err != nil {
-			_ = err
-		}
+candidates, err := a.storage.LookupBridgeCandidates(
+    ctx,
+    b.anchor,
+    a.bridgeCorrelationWindow,
+    a.bridgeNodeIDs,
+)
+
+if err != nil {
+    log.Printf("bridge lookup error: %v", err)
+    continue
+}
+
+log.Printf("bridge: found %d candidates", len(candidates))
+
+if len(candidates) == 0 {
+    continue
+}
+
+...
+
+if err := a.storage.RecordBridgedFlows(ctx, flows); err != nil {
+    log.Printf("bridge insert error: %v", err)
+} else {
+    log.Printf("bridge: inserted %d flows", len(flows))
+}
 	}
 }
 
